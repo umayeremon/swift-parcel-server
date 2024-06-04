@@ -27,17 +27,17 @@ async function run() {
     // Send a ping to confirm a successful connection
 
     const userCollection = client.db("swiftParcelDB").collection("users");
+    const parcelCollection = client.db("swiftParcelDB").collection("parcels");
 
-    //usersApi
+    //user related Api
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
     app.post("/users", async (req, res) => {
       const user = req.body;
-      const email = user.email;
       const query = { email: user.email };
-      if (email=== null) {
+      if (user.email === null) {
         return res.send({ message: "email invalid", email: null });
       }
       const isExistUser = await userCollection.findOne(query);
@@ -45,6 +45,17 @@ async function run() {
         return res.send({ message: "user already exist", insertedId: null });
       }
       const result = userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // parcel related api
+    app.get('/parcels', async(req,res)=>{
+      const result= await parcelCollection.find().toArray()
+      res.send(result)
+    })
+    app.post("/parcels", async (req, res) => {
+      const parcel = req.body;
+      const result = await parcelCollection.insertOne(parcel);
       res.send(result);
     });
 
