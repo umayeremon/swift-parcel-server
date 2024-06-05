@@ -59,6 +59,28 @@ async function run() {
       const result= await userCollection.updateOne(filter,updatedDoc)
       res.send(result)
     })
+    app.patch('/users/user/:id', async(req,res)=>{
+      const id=req.params.id;
+      const filter= {_id: new ObjectId(id)}
+      const updatedDoc={
+        $set:{
+          role:'User'
+        }
+      }
+      const result= await userCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
+    app.patch('/users/deliveryMan/:id', async(req,res)=>{
+      const id=req.params.id;
+      const filter= {_id: new ObjectId(id)}
+      const updatedDoc={
+        $set:{
+          role:'Delivery Man'
+        }
+      }
+      const result= await userCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
 
 
     // parcel related api
