@@ -75,6 +75,20 @@ async function run() {
       res.send({isAdmin})
 
     })
+    app.get('/users/deliveryMan/:email', async(req,res)=>{
+      const email=req.params.email;
+      if(email!==req.decoded.email){
+        return res.status(403).send({message:"Forbidden Access"})
+      }
+      const query={email:email}
+      const user= await userCollection.findOne(query)
+      let isDeliveryMan=false;
+      if(user){
+        isDeliveryMan= user.role === 'Delivery Man'
+      }
+      res.send({isDeliveryMan})
+
+    })
 
     app.post("/users", async (req, res) => {
       const user = req.body;
