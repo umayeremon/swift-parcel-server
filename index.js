@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
@@ -47,6 +47,19 @@ async function run() {
       const result = userCollection.insertOne(user);
       res.send(result);
     });
+
+    app.patch('/users/admin/:id', async(req,res)=>{
+      const id=req.params.id;
+      const filter= {_id: new ObjectId(id)}
+      const updatedDoc={
+        $set:{
+          role:'Admin'
+        }
+      }
+      const result= await userCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
+
 
     // parcel related api
     app.get('/parcels', async(req,res)=>{
