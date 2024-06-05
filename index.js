@@ -1,7 +1,7 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -30,8 +30,33 @@ async function run() {
     const userCollection = client.db("swiftParcelDB").collection("users");
     const parcelCollection = client.db("swiftParcelDB").collection("parcels");
 
+    //jwt related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_SECRET_TOKEN, {
+        expiresIn: "1hr",
+      });
+      res.send({ token });
+    });
+
+    // middlewares
+    const verifyToken = (req, res, next) => {
+      // console.log(req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: Unauthorized });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_SECRET_TOKEN, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: Unauthorized });
+        }
+        res.decoded=decoded
+        next();
+      });
+    };
+
     //user related Api
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -49,46 +74,45 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/users/admin/:id', async(req,res)=>{
-      const id=req.params.id;
-      const filter= {_id: new ObjectId(id)}
-      const updatedDoc={
-        $set:{
-          role:'Admin'
-        }
-      }
-      const result= await userCollection.updateOne(filter,updatedDoc)
-      res.send(result)
-    })
-    app.patch('/users/user/:id', async(req,res)=>{
-      const id=req.params.id;
-      const filter= {_id: new ObjectId(id)}
-      const updatedDoc={
-        $set:{
-          role:'User'
-        }
-      }
-      const result= await userCollection.updateOne(filter,updatedDoc)
-      res.send(result)
-    })
-    app.patch('/users/deliveryMan/:id', async(req,res)=>{
-      const id=req.params.id;
-      const filter= {_id: new ObjectId(id)}
-      const updatedDoc={
-        $set:{
-          role:'Delivery Man'
-        }
-      }
-      const result= await userCollection.updateOne(filter,updatedDoc)
-      res.send(result)
-    })
-
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: "Admin",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    app.patch("/users/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: "User",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    app.patch("/users/deliveryMan/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: "Delivery Man",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
 
     // parcel related api
-    app.get('/parcels', async(req,res)=>{
-      const result= await parcelCollection.find().toArray()
-      res.send(result)
-    })
+    app.get("/parcels", async (req, res) => {
+      const result = await parcelCollection.find().toArray();
+      res.send(result);
+    });
     app.post("/parcels", async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
