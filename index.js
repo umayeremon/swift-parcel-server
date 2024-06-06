@@ -85,6 +85,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users/:role",verifyToken,verifyAdmin,  async (req, res) => {
+      const role = req.params.role;
+      const query = { role: role };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+    
+
     // admin api
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -115,7 +123,7 @@ async function run() {
       res.send({ isDeliveryMan });
     });
 
-    app.post("/users", verifyToken, verifyAdmin, async (req, res) => {
+    app.post("/users", verifyToken, async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       if (user.email === null) {
@@ -126,6 +134,29 @@ async function run() {
         return res.send({ message: "user already exist", insertedId: null });
       }
       const result = userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.put("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const phoneNumber = req.body.phoneNumber;
+      console.log(phoneNumber);
+      const options = { upsert: true };
+      const filter = { email: email };
+      const user = await userCollection.findOne(filter);
+      const updatedDoc = {
+        $set: {
+          phoneNumber: phoneNumber,
+        },
+      };
+      const result = await userCollection.updateOne(user, updatedDoc, options);
       res.send(result);
     });
 
@@ -145,17 +176,6 @@ async function run() {
         res.send(result);
       }
     );
-    app.patch("/users/user/:id", verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "User",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
     app.patch(
       "/users/deliveryMan/:id",
       verifyToken,
@@ -174,11 +194,16 @@ async function run() {
     );
 
     // parcel related api
-    app.get("/parcels",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/parcels", verifyToken, verifyAdmin, async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
-    app.post("/parcels",verifyToken,verifyAdmin, async (req, res) => {
+
+    app.get('/parcelsCount', async(req,res)=>{
+      const count= await parcelCollection.estimatedDocumentCount()
+      res.send({count})
+    })
+    app.post("/parcels", async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
