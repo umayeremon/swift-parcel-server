@@ -40,8 +40,9 @@ async function run() {
     });
 
     // middlewares
+
+    // verify token
     const verifyToken = (req, res, next) => {
-      // console.log(req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Unauthorized Access" });
       }
@@ -50,47 +51,71 @@ async function run() {
         if (err) {
           return res.status(401).send({ message: "Unauthorized Access" });
         }
-        req.decoded=decoded
+        req.decoded = decoded;
         next();
       });
     };
 
+    // verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "Admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+    // verify deliveryMan
+    const verifyDeliveryMan = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isDeliveryMan = user?.role === "Delivery Man";
+      if (!isDeliveryMan) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     //user related Api
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get('/users/admin/:email', async(req,res)=>{
-      const email=req.params.email;
-      if(email!==req.decoded.email){
-        return res.status(403).send({message:"Forbidden Access"})
+    // admin api
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
       }
-      const query={email:email}
-      const user= await userCollection.findOne(query)
-      let isAdmin=false;
-      if(user){
-        isAdmin= user.role === 'Admin'
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let isAdmin = false;
+      if (user) {
+        isAdmin = user?.role === "Admin";
       }
-      res.send({isAdmin})
+      res.send({ isAdmin });
+    });
 
-    })
-    app.get('/users/deliveryMan/:email', async(req,res)=>{
-      const email=req.params.email;
-      if(email!==req.decoded.email){
-        return res.status(403).send({message:"Forbidden Access"})
+    //delivery man api
+    app.get("/users/deliveryMan/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
       }
-      const query={email:email}
-      const user= await userCollection.findOne(query)
-      let isDeliveryMan=false;
-      if(user){
-        isDeliveryMan= user.role === 'Delivery Man'
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let isDeliveryMan = false;
+      if (user) {
+        isDeliveryMan = user?.role === "Delivery Man";
       }
-      res.send({isDeliveryMan})
+      res.send({ isDeliveryMan });
+    });
 
-    })
-
-    app.post("/users", async (req, res) => {
+    app.post("/users", verifyToken, verifyAdmin, async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       if (user.email === null) {
@@ -104,18 +129,23 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/users/admin/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "Admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
-    app.patch("/users/user/:id", async (req, res) => {
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "Admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
+    app.patch("/users/user/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -126,24 +156,29 @@ async function run() {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
-    app.patch("/users/deliveryMan/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "Delivery Man",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/deliveryMan/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "Delivery Man",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
 
     // parcel related api
-    app.get("/parcels", async (req, res) => {
+    app.get("/parcels",verifyToken,verifyAdmin, async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
-    app.post("/parcels", async (req, res) => {
+    app.post("/parcels",verifyToken,verifyAdmin, async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
