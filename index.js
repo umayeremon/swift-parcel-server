@@ -85,13 +85,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/:role",verifyToken,verifyAdmin,  async (req, res) => {
+    app.get("/users/:role", verifyToken, verifyAdmin, async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
-    
 
     // admin api
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
@@ -123,7 +122,7 @@ async function run() {
       res.send({ isDeliveryMan });
     });
 
-    app.post("/users", verifyToken, async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       if (user.email === null) {
@@ -195,17 +194,39 @@ async function run() {
 
     // parcel related api
     app.get("/parcels", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await parcelCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await parcelCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
-    app.get('/parcelsCount', async(req,res)=>{
-      const count= await parcelCollection.estimatedDocumentCount()
-      res.send({count})
-    })
-    app.post("/parcels", async (req, res) => {
+    app.post("/parcels", verifyToken, verifyAdmin, async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
+      res.send(result);
+    });
+    app.put("/parcels/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const data = req.body;
+      console.log(data)
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          status: data.status,
+          deliveryManId: data.deliveryManId,
+          approximateDeliveryDate: data.approximateDeliveryDate,
+        },
+      };
+      const result = await parcelCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
       res.send(result);
     });
 
