@@ -92,9 +92,9 @@ async function run() {
       res.send(result);
     });
     app.get("/users/user/:email", verifyToken, async (req, res) => {
-      const email=req.params.email;
-      const filter= {email:email};
-      const result = await userCollection.findOne(filter)
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await userCollection.findOne(filter);
       res.send(result);
     });
 
@@ -219,7 +219,6 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const data = req.body;
-      console.log(data);
       const options = { upsert: true };
       const updatedDoc = {
         $set: {
@@ -233,6 +232,31 @@ async function run() {
         updatedDoc,
         options
       );
+      res.send(result);
+    });
+    app.patch("/parcels/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const data = req.body;
+      console.log(data);
+      const updatedDoc = {
+        $set: {
+          name:data.name,
+          email:data.email,
+          phoneNumber:data.phoneNumber,
+          parcelDeliveryAddress:data.parcelDeliveryAddress,
+          parcelType:data.parcelType,
+          parcelWeight:data.parcelWeight,
+          receiversName:data.receiversName,
+          receiversPhoneNumber:data.receiversPhoneNumber,
+          deliveryAddressLatitude:data.deliveryAddressLatitude,
+          deliveryAddressLongitude:data.deliveryAddressLongitude,
+          requestedDeliveryDate:data.requestedDeliveryDate,
+          price:data.price,
+          bookingDate:data.bookingDate,
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
