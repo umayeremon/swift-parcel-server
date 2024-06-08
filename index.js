@@ -91,6 +91,12 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
+    app.get("/users/user/:email", verifyToken, async (req, res) => {
+      const email=req.params.email;
+      const filter= {email:email};
+      const result = await userCollection.findOne(filter)
+      res.send(result);
+    });
 
     // admin api
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
@@ -146,7 +152,6 @@ async function run() {
     app.put("/users/:email", async (req, res) => {
       const email = req.params.email;
       const phoneNumber = req.body.phoneNumber;
-      console.log(phoneNumber);
       const options = { upsert: true };
       const filter = { email: email };
       const user = await userCollection.findOne(filter);
@@ -194,13 +199,14 @@ async function run() {
 
     // parcel related api
     app.get("/parcels", verifyToken, verifyAdmin, async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      const result = await parcelCollection
-        .find()
-        .skip(page * size)
-        .limit(size)
-        .toArray();
+      const result = await parcelCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/parcels/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -213,7 +219,7 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const data = req.body;
-      console.log(data)
+      console.log(data);
       const options = { upsert: true };
       const updatedDoc = {
         $set: {
