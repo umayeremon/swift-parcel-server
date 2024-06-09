@@ -210,9 +210,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/parcels/parcel/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
+    app.get("/parcels/parcel/:status", verifyToken, async (req, res) => {
+      const status = req.params.status;
+      const query = { status: status };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
@@ -285,12 +285,39 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+    app.patch("/parcels/deliver/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const data = req.body;
+      const updatedDoc = {
+        $set: {
+         status: data.status
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    app.patch("/parcels/deliver/cancel/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const data = req.body;
+      console.log(data);
+      const updatedDoc = {
+        $set: {
+          status: data.status,
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
     app.delete("/parcels/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result= await parcelCollection.deleteOne(query)
       res.send(result)
     });
+
+    //  count related api
 
     await client.db("admin").command({ ping: 1 });
     console.log(
