@@ -210,20 +210,18 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/parcels/parcel/:email",verifyToken, async (req, res) => {
+    app.get("/parcels/parcel/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/parcels/deliveryMan/:id",verifyToken, async (req, res) => {
+    app.get("/parcels/deliveryMan/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { deliveryManId: id };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-
-   
 
     app.post("/parcels", verifyToken, verifyAdmin, async (req, res) => {
       const parcel = req.body;
@@ -286,6 +284,12 @@ async function run() {
       };
       const result = await parcelCollection.updateOne(filter, updatedDoc);
       res.send(result);
+    });
+    app.delete("/parcels/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result= await parcelCollection.deleteOne(query)
+      res.send(result)
     });
 
     await client.db("admin").command({ ping: 1 });
