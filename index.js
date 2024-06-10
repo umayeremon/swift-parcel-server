@@ -199,7 +199,7 @@ async function run() {
     );
 
     // parcel related api
-    app.get("/parcels", verifyToken, async (req, res) => {
+    app.get("/parcels", async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
@@ -209,10 +209,16 @@ async function run() {
       const result = await parcelCollection.findOne(filter);
       res.send(result);
     });
-
-    app.get("/parcels/parcel/:status", verifyToken, async (req, res) => {
+    app.get("/parcels/delivered/:status", async (req, res) => {
       const status = req.params.status;
-      const query = { status: status };
+      const filter = { status: status };
+      const result = await parcelCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/parcels/parcel/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
@@ -291,7 +297,7 @@ async function run() {
       const data = req.body;
       const updatedDoc = {
         $set: {
-         status: data.status
+          status: data.status,
         },
       };
       const result = await parcelCollection.updateOne(filter, updatedDoc);
@@ -313,8 +319,8 @@ async function run() {
     app.delete("/parcels/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result= await parcelCollection.deleteOne(query)
-      res.send(result)
+      const result = await parcelCollection.deleteOne(query);
+      res.send(result);
     });
 
     //  count related api
