@@ -58,12 +58,11 @@ async function run() {
 
     // verify token
     const verifyToken = (req, res, next) => {
-      console.log(req.headers.authorization)
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Unauthorized Access" });
       }
       const token = req.headers.authorization.split(" ")[1];
-      
+
       jwt.verify(token, process.env.ACCESS_SECRET_TOKEN, (err, decoded) => {
         if (err) {
           return res.status(401).send({ message: "Unauthorized Access" });
@@ -216,7 +215,7 @@ async function run() {
     );
 
     // parcel related api
-    app.get("/parcels", verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/parcels", verifyToken, verifyAdmin, async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
@@ -242,6 +241,14 @@ async function run() {
       const result = await parcelCollection.find(filter).toArray();
       res.send(result);
     });
+    app.get("/parcels/parcelDelivered/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        deliveryManId: id,
+      };
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.get("/parcels/parcel/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -261,7 +268,7 @@ async function run() {
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
     });
-    app.put("/parcels/:id", verifyToken,async (req, res) => {
+    app.put("/parcels/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const data = req.body;
@@ -352,15 +359,17 @@ async function run() {
 
     //  review related api
 
-    app.get('/reviews',verifyToken, async(req,res)=>{
-      const result= await reviewCollection.find().toArray()
-      res.send(result)
-    })
-    app.post('/reviews',verifyToken, async(req,res)=>{
-      const review=req.body;
-      const result= await reviewCollection.insertOne(review)
-      res.send(result)
-    })
+    app.get("/reviews/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { deliveryManId: id };
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.post("/reviews", verifyToken, async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
