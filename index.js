@@ -9,6 +9,20 @@ const port = process.env.PORT || 5000;
 //middleware
 app.use(cors());
 app.use(express.json());
+// app.use(cors({
+//   'allowedHeaders': ['sessionId', 'Content-Type'],
+//   'exposedHeaders': ['sessionId'],
+//   'origin': '*',
+//   'methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   'preflightContinue': false
+// }));
+// const corsConfig = {
+//   origin: "",
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'DELETE']
+//   }
+//   app.use(cors(corsConfig))
+//   app.options("*", cors(corsConfig))
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.2fsgp3y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -29,6 +43,7 @@ async function run() {
 
     const userCollection = client.db("swiftParcelDB").collection("users");
     const parcelCollection = client.db("swiftParcelDB").collection("parcels");
+    const reviewCollection = client.db("swiftParcelDB").collection("reviews");
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -43,10 +58,12 @@ async function run() {
 
     // verify token
     const verifyToken = (req, res, next) => {
+      console.log(req.headers.authorization)
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Unauthorized Access" });
       }
       const token = req.headers.authorization.split(" ")[1];
+      
       jwt.verify(token, process.env.ACCESS_SECRET_TOKEN, (err, decoded) => {
         if (err) {
           return res.status(401).send({ message: "Unauthorized Access" });
@@ -80,7 +97,7 @@ async function run() {
     };
 
     //user related Api
-    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -199,7 +216,11 @@ async function run() {
     );
 
     // parcel related api
-    app.get("/parcels", async (req, res) => {
+    app.get("/parcels", verifyToken,verifyAdmin, async (req, res) => {
+      const result = await parcelCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/parcels/bookedParcel", async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
@@ -209,7 +230,13 @@ async function run() {
       const result = await parcelCollection.findOne(filter);
       res.send(result);
     });
-    app.get("/parcels/delivered/:status", async (req, res) => {
+    app.get("/parcels/delivered/:status", verifyToken, async (req, res) => {
+      const status = req.params.status;
+      const filter = { status: status };
+      const result = await parcelCollection.find(filter).toArray();
+      res.send(result);
+    });
+    app.get("/parcels/totalDelivered/:status", async (req, res) => {
       const status = req.params.status;
       const filter = { status: status };
       const result = await parcelCollection.find(filter).toArray();
@@ -229,12 +256,12 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/parcels", verifyToken, verifyAdmin, async (req, res) => {
+    app.post("/parcels", verifyToken, async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
     });
-    app.put("/parcels/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.put("/parcels/:id", verifyToken,async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const data = req.body;
@@ -323,7 +350,17 @@ async function run() {
       res.send(result);
     });
 
-    //  count related api
+    //  review related api
+
+    app.get('/reviews',verifyToken, async(req,res)=>{
+      const result= await reviewCollection.find().toArray()
+      res.send(result)
+    })
+    app.post('/reviews',verifyToken, async(req,res)=>{
+      const review=req.body;
+      const result= await reviewCollection.insertOne(review)
+      res.send(result)
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
