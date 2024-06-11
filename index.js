@@ -249,6 +249,12 @@ async function run() {
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
+    app.get("/parcels/bookedParcel/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email};
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.get("/parcels/parcel/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
