@@ -38,7 +38,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
 
     const userCollection = client.db("swiftParcelDB").collection("users");
@@ -96,12 +96,22 @@ async function run() {
     };
 
     //user related Api
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyToken, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/users/registeredUser", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/:role", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users/:role", verifyToken,verifyAdmin,  async (req, res) => {
+      const role = req.params.role;
+      const query = { role: role };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/users/deliverymanRole/:role",async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
       const result = await userCollection.find(query).toArray();
@@ -241,7 +251,7 @@ async function run() {
       const result = await parcelCollection.find(filter).toArray();
       res.send(result);
     });
-    app.get("/parcels/parcelDelivered/:id", verifyToken, async (req, res) => {
+    app.get("/parcels/parcelDelivered/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
         deliveryManId: id,
@@ -364,8 +374,12 @@ async function run() {
     });
 
     //  review related api
-
-    app.get("/reviews/:id", verifyToken, async (req, res) => {
+/* */
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/reviews/:id", async (req, res) => {
       const id = req.params.id;
       const query = { deliveryManId: id };
       const result = await reviewCollection.find(query).toArray();
