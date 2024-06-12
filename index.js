@@ -9,20 +9,6 @@ const port = process.env.PORT || 5000;
 //middleware
 app.use(cors());
 app.use(express.json());
-// app.use(cors({
-//   'allowedHeaders': ['sessionId', 'Content-Type'],
-//   'exposedHeaders': ['sessionId'],
-//   'origin': '*',
-//   'methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   'preflightContinue': false
-// }));
-// const corsConfig = {
-//   origin: "",
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'DELETE']
-//   }
-//   app.use(cors(corsConfig))
-//   app.options("*", cors(corsConfig))
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.2fsgp3y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -83,20 +69,8 @@ async function run() {
       }
       next();
     };
-    // verify deliveryMan
-    const verifyDeliveryMan = async (req, res, next) => {
-      const email = req.decoded.email;
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      const isDeliveryMan = user?.role === "Delivery Man";
-      if (!isDeliveryMan) {
-        return res.status(403).send({ message: "forbidden access" });
-      }
-      next();
-    };
-
     //user related Api
-    app.get("/users",verifyToken, async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -105,13 +79,13 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/:role", verifyToken,verifyAdmin,  async (req, res) => {
+    app.get("/users/:role", verifyToken, verifyAdmin, async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/users/deliverymanRole/:role",async (req, res) => {
+    app.get("/users/deliverymanRole/:role", async (req, res) => {
       const role = req.params.role;
       const query = { role: role };
       const result = await userCollection.find(query).toArray();
@@ -126,19 +100,24 @@ async function run() {
     });
 
     // admin api
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "Forbidden Access" });
+    app.get(
+      "/users/admin/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        if (email !== req.decoded.email) {
+          return res.status(403).send({ message: "Forbidden Access" });
+        }
+        const query = { email: email };
+        const user = await userCollection.findOne(query);
+        let isAdmin = false;
+        if (user) {
+          isAdmin = user?.role === "Admin";
+        }
+        res.send({ isAdmin });
       }
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      let isAdmin = false;
-      if (user) {
-        isAdmin = user?.role === "Admin";
-      }
-      res.send({ isAdmin });
-    });
+    );
 
     //delivery man api
     app.get("/users/deliveryMan/:email", verifyToken, async (req, res) => {
@@ -261,7 +240,7 @@ async function run() {
     });
     app.get("/parcels/bookedParcel/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      const query = { email: email};
+      const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
@@ -374,7 +353,7 @@ async function run() {
     });
 
     //  review related api
-/* */
+    /* */
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
