@@ -4,6 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const app = express();
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -70,7 +71,7 @@ async function run() {
       next();
     };
     //user related Api
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -79,10 +80,23 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/countUsers", async (req, res) => {
+      const totalUsers = await userCollection.countDocuments({
+        role: "User",
+      });
+      res.send({ totalUsers });
+    });
+
     app.get("/users/:role", verifyToken, verifyAdmin, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const role = req.params.role;
       const query = { role: role };
-      const result = await userCollection.find(query).toArray();
+      const result = await userCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
     app.get("/users/deliverymanRole/:role", async (req, res) => {
@@ -100,24 +114,19 @@ async function run() {
     });
 
     // admin api
-    app.get(
-      "/users/admin/:email",
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
-        const email = req.params.email;
-        if (email !== req.decoded.email) {
-          return res.status(403).send({ message: "Forbidden Access" });
-        }
-        const query = { email: email };
-        const user = await userCollection.findOne(query);
-        let isAdmin = false;
-        if (user) {
-          isAdmin = user?.role === "Admin";
-        }
-        res.send({ isAdmin });
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
       }
-    );
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let isAdmin = false;
+      if (user) {
+        isAdmin = user?.role === "Admin";
+      }
+      res.send({ isAdmin });
+    });
 
     //delivery man api
     app.get("/users/deliveryMan/:email", verifyToken, async (req, res) => {
@@ -258,7 +267,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/parcels", verifyToken, async (req, res) => {
+    app.post("/parcels", async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
@@ -332,6 +341,7 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+
     app.patch("/parcels/deliver/cancel/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -353,7 +363,6 @@ async function run() {
     });
 
     //  review related api
-    /* */
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
@@ -367,6 +376,36 @@ async function run() {
     app.post("/reviews", verifyToken, async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
+
+    // payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { charge } = req.body;
+      const amount = parseInt(charge * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount || 0,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
+    app.patch("/parcels/payment/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const data = req.body;
+      const updatedDoc = {
+        $set: {
+          payment_status: data.paymentStatus,
+          trans_id: data.trans_id,
+        },
+      };
+      const result = await parcelCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
       res.send(result);
     });
 
